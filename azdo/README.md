@@ -2,7 +2,7 @@
 
 ## Boilerplate AZDO Pipeline for Testing OIDC Endpoint
 
-If you want to test this yourself, check out the quick terraform
+If you want to test this yourself, check out the quick terraform template
 
 ```bash
 # 1. create azdo organization
