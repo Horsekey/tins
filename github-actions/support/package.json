@@ -1,0 +1,9 @@
+{
+  "name": "demo-app",
+  "version": "1.0.0",
+  "description": "Demo app for the GitHub Actions pwn request vulnerability example.",
+  "scripts": {
+    "preinstall": "echo '[VULN DEMO] preinstall hook running - attacker controls this via package.json in their PR, executes with GITHUB_TOKEN and secrets'",
+    "test": "echo 'Tests passed (demo)'"
+  }
+}

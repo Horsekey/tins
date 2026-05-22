@@ -1,0 +1,24 @@
+# Terraform state — contains sensitive output values
+terraform.tfstate
+terraform.tfstate.backup
+.terraform.tfstate.lock.info
+
+# Downloaded providers and modules
+.terraform/
+
+# Variable files — terraform.tfvars contains your GitHub token
+terraform.tfvars
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI config
+.terraformrc
+terraform.rc

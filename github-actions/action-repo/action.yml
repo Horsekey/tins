@@ -1,0 +1,9 @@
+name: 'Demo Build Action'
+description: 'Simulates a third-party build action. This is the benign v1.0 release.'
+
+runs:
+  using: composite
+  steps:
+    - name: Build
+      shell: bash
+      run: echo "Build complete. v1.0 - this commit is safe."

@@ -1,0 +1,28 @@
+# SECURE: Split privileged and unprivileged work across pull_request + workflow_run
+#
+# Fix: Never execute untrusted PR code in a privileged context.
+# The untrusted pull_request workflow runs tests with no secrets and no write access,
+# uploads a result artifact, then exits. A separate workflow_run workflow (which runs
+# in the base branch context) picks up that artifact and performs privileged actions
+# (e.g. posting a comment) without ever touching the PR's code.
+
+name: "[SECURE] 01 - Pwn Request (Part 1: Unprivileged CI)"
+
+on: pull_request  # read-only, no secrets
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - run: npm install
+      - run: npm test
+
+      # Save the PR number so the privileged workflow_run job can use it safely
+      - name: Save PR number
+        run: echo "${{ github.event.number }}" > pr-number.txt
+
+      - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4.6.0
+        with:
+          name: pr-number
+          path: pr-number.txt

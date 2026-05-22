@@ -1,0 +1,31 @@
+# INSECURE: workflow_run artifact poisoning — executing attacker-controlled content
+#
+# Vulnerability: workflow_run always executes in the base branch context with
+# elevated permissions (write access, secrets). When this privileged workflow
+# downloads an artifact produced by an unprivileged pull_request workflow and
+# pipes it directly to bash, the attacker fully controls that artifact's content
+# through their PR — gaining arbitrary code execution with write access and secrets.
+
+name: "[INSECURE] 04 - workflow_run Artifact Poisoning"
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+jobs:
+  post-ci:
+    runs-on: ubuntu-latest
+    # Runs with write access + secrets regardless of whether the triggering PR is trusted
+    steps:
+      - name: Download artifact from PR workflow
+        uses: actions/download-artifact@fa0a91b85d4f404e444306234d1bf4f8b6f89d7  # v4.1.8
+        with:
+          name: ci-script
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      # DANGER: artifact content is attacker-controlled; piping to bash gives RCE
+      # with write access to the repository and access to all secrets
+      - name: Run CI script from artifact
+        run: bash ci-script.sh

@@ -1,0 +1,36 @@
+# SECURE: Label-based gate with immutable commit SHA — prevents TOCTOU
+#
+# Fix: Replace the comment-based trigger with a two-step label flow.
+# Step 1 (this workflow): A maintainer applies the label "deploy:approved".
+#   The workflow reads the PR's current HEAD SHA at label-creation time and
+#   re-applies a new label that encodes it: "deploy:sha:<SHA>".
+# Step 2 (a separate deploy workflow, not shown): triggers on label creation
+#   matching "deploy:sha:*", extracts the SHA from the label name, and checks
+#   out exactly that commit — making the window for TOCTOU zero.
+
+name: "[SECURE] 05 - IssueOps (Label Gate)"
+
+on:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  approve-deploy:
+    # Only runs when a maintainer explicitly adds "deploy:approved"
+    if: github.event.label.name == 'deploy:approved'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Pin approved SHA via label
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          # Encode the exact SHA into a new label — downstream deploy reads this label,
+          # never the mutable branch. The window for TOCTOU is eliminated.
+          gh pr edit "$PR" \
+            --repo "${{ github.repository }}" \
+            --add-label "deploy:sha:$SHA"

@@ -1,0 +1,4 @@
+github_token     = "ghp_YourPersonalAccessTokenHere"
+github_owner     = "your-username"
+repo_name        = "github-actions-vulns-demo"
+action_repo_name = "github-actions-vulns-demo-action"

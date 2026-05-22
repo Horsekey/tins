@@ -1,0 +1,31 @@
+# INSECURE: IssueOps TOCTOU via issue_comment + mutable PR ref checkout
+#
+# Vulnerability: This workflow triggers on any issue comment containing "/deploy".
+# It then checks out the PR's HEAD *branch* (a mutable reference). An attacker
+# submits a clean, benign PR; waits for a maintainer to comment "/deploy";
+# then — in the window between the comment and the checkout — force-pushes
+# malicious code to the branch. The workflow executes the new, malicious deploy.sh
+# with write access and secrets. This is a Time-of-Check to Time-of-Use (TOCTOU) attack.
+
+name: "[INSECURE] 05 - IssueOps TOCTOU"
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  deploy:
+    # Triggers on any comment — no check that the commenter has permissions
+    if: github.event.comment.body == '/deploy'
+    runs-on: ubuntu-latest
+    steps:
+      # DANGER: head.ref is a branch name — mutable. Attacker can push new code
+      # between the "/deploy" comment and this checkout step.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          ref: ${{ github.event.issue.pull_request.head.ref }}
+
+      # DANGER: now executing whatever code the attacker left in the branch
+      - run: bash deploy.sh
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}

@@ -1,0 +1,23 @@
+# INSECURE: Pwn Request via pull_request_target + untrusted checkout
+#
+# Vulnerability: pull_request_target runs with write access and secrets from the
+# base repo, but this workflow explicitly checks out the attacker's PR HEAD.
+# Running `npm install` lets the attacker execute arbitrary code via package.json
+# preinstall/postinstall hooks — with full access to GITHUB_TOKEN and secrets.
+
+name: "[INSECURE] 01 - Pwn Request"
+
+on: pull_request_target
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # DANGER: checking out untrusted PR code in a privileged context
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      # DANGER: runs attacker-controlled package.json scripts with write access + secrets
+      - run: npm install
+      - run: npm test

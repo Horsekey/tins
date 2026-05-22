@@ -1,0 +1,44 @@
+# SECURE: workflow_run — treat artifact data as untrusted; never execute it
+#
+# Fix: Never execute content from an artifact produced by an untrusted workflow.
+# Instead, only read structured data (e.g. a PR number stored as plain text),
+# validate it strictly, and use it only as input to safe API calls. All logic
+# that touches secrets or has write access must live in the base-branch workflow,
+# not in data supplied by the PR.
+
+name: "[SECURE] 04 - workflow_run Artifact Poisoning"
+
+on:
+  workflow_run:
+    workflows: ["[SECURE] 01 - Pwn Request (Part 1: Unprivileged CI)"]
+    types: [completed]
+
+jobs:
+  comment-results:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download PR number artifact
+        uses: actions/download-artifact@fa0a91b85d4f404e444306234d1bf4f8b6f89d7  # v4.1.8
+        with:
+          name: pr-number
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Validate and use PR number
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=$(cat pr-number.txt)
+
+          # Validate: must be a plain integer — reject anything else
+          if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "Invalid PR number in artifact: $PR_NUMBER"
+            exit 1
+          fi
+
+          CONCLUSION="${{ github.event.workflow_run.conclusion }}"
+
+          # Use the validated integer as a parameter to a safe API call — never execute it
+          gh pr comment "$PR_NUMBER" \
+            --repo "${{ github.repository }}" \
+            --body "CI finished with conclusion: $CONCLUSION"

@@ -1,0 +1,24 @@
+# SECURE: Store untrusted values in environment variables before shell use
+#
+# Fix: Assign attacker-controlled context values to environment variables via the
+# `env:` block. The shell then reads $TITLE / $BODY as data, not as code to
+# evaluate. The ${{ }} interpolation still happens, but the value lands in an
+# env var — not inline in the script — so shell metacharacters are inert.
+
+name: "[SECURE] 02 - Script Injection"
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  log-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log issue title
+        env:
+          TITLE: ${{ github.event.issue.title }}
+          BODY: ${{ github.event.issue.body }}
+        run: |
+          echo "New issue opened: $TITLE"
+          echo "Issue body: $BODY"
