@@ -1,0 +1,27 @@
+trigger:
+  - main
+
+# pool:
+#   name: 'self-host'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+jobs:
+  - job: Deploy
+    steps:
+      - task: NpmAuthenticate@0
+        displayName: 'Authenticate to Azure Artifacts'
+        inputs:
+          workingFile: $(Build.SourcesDirectory)/.npmrc
+
+      - task: AzureCLI@2
+        displayName: 'Deploy Application'
+        inputs:
+          azureSubscription: 'oidc-pipeline'
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+            cd $(Build.SourcesDirectory)
+
+            npm install .

