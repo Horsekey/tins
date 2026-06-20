@@ -15,7 +15,7 @@ provider "github" {
 resource "github_repository" "demo" {
   name        = var.repo_name
   description = "Edu demo of insecure GitHub Actions patterns from the GitHub Security Lab blog series. Each insecure workflow is paired with a secure counterpart."
-  visibility  = "public"
+  visibility  = "private"
   has_issues  = true  # required for IssueOps (workflow 05) demo
   auto_init   = true
 }
@@ -25,7 +25,7 @@ resource "github_repository" "demo" {
 resource "github_repository" "action_repo" {
   name        = var.action_repo_name
   description = "Companion demo action for the supply chain attack simulation in ${var.repo_name}. See README for attack instructions."
-  visibility  = "public"
+  visibility  = "private"
   auto_init   = true
 }
 
